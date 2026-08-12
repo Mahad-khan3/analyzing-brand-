@@ -28,3 +28,6 @@ Thumbs.db
 
 # OS
 Thumbs.db
+
+.vercel
+.env*
