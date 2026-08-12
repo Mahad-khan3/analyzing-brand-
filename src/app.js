@@ -4,6 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
+const mongoose = require('mongoose');
 const env = require('./config/env');
 const routes = require('./routes');
 const swaggerSpec = require('./config/swagger');
@@ -31,6 +32,26 @@ app.use(cookieParser());
 if (env.NODE_ENV !== 'test') app.use(morgan('dev'));
 
 app.use(createLimiter());
+
+let dbPromise = null;
+async function ensureDB() {
+  if (mongoose.connection.readyState === 1) return;
+  if (!dbPromise) {
+    dbPromise = mongoose
+      .connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 15000 })
+      .finally(() => { dbPromise = null; });
+  }
+  return dbPromise;
+}
+
+app.use('/api/v1', async (req, res, next) => {
+  try {
+    await ensureDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', message: 'BrandPilot AI API healthy' }));
 
